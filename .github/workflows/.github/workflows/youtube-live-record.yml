@@ -1,0 +1,38 @@
+name: Record YouTube Live Stream
+
+on:
+  workflow_dispatch:
+
+jobs:
+  record_live:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Install yt-dlp and ffmpeg
+        run: |
+          sudo apt update
+          sudo apt install -y ffmpeg python3-pip
+          pip3 install yt-dlp
+
+      - name: Create recordings folder
+        run: mkdir -p recordings
+
+      - name: Record YouTube Live Stream (tiled files)
+        run: |
+          # متغیرها
+          LINK="https://www.youtube.com/live/RG1iWQtYSL0?si=UDy4uakSCVKvoJMj"
+          DATE=$(date +%Y-%m-%d_%H-%M-%S)
+          mkdir -p recordings
+
+          # رکورد لایو و تکه‌تکه کردن هر 1 ساعت (3600 ثانیه)
+          yt-dlp --live-from-start -f best -o - "$LINK" | \
+          ffmpeg -i pipe:0 -c copy -f segment -segment_time 3600 -reset_timestamps 1 "recordings/live_${DATE}_part%03d.mp4"
+
+      - name: Upload recordings as artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: yt-live-recordings
+          path: recordings/*
