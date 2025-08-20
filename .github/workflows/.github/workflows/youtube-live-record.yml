@@ -36,3 +36,10 @@ jobs:
         with:
           name: yt-live-recordings
           path: recordings/*
+
+- name: Upload recordings as artifact
+  uses: actions/upload-artifact@v4   # <-- تغییر به v4
+  with:
+    name: yt-live-recordings
+    path: recordings/*
+
