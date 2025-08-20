@@ -1,0 +1,30 @@
+name: Record YouTube Live Stream
+
+on:
+  workflow_dispatch:
+
+jobs:
+  record_live:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Install yt-dlp + FFmpeg
+        uses: AnimMouse/setup-yt-dlp@v3
+        with:
+          ffmpeg: true
+
+      - name: Record the live stream
+        run: |
+          mkdir -p recordings
+          yt-dlp --live-from-start -f best \
+            -o "recordings/%(title)s_%(id)s.%(ext)s" \
+            https://www.youtube.com/watch?v=RG1iWQtYSL0
+
+      - name: Upload recording as artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: yt-live-recording
+          path: recordings/*
