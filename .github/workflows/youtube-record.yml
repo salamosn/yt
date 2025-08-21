@@ -1,6 +1,9 @@
-name: Record YouTube Live Stream
+name: YouTube Live Recorder
 
 on:
+  schedule:
+    # هر ۵ دقیقه چک کن کانال لایو هست یا نه
+    - cron: "*/5 * * * *"
   workflow_dispatch:
 
 jobs:
@@ -16,15 +19,34 @@ jobs:
         with:
           ffmpeg: true
 
-      - name: Record the live stream
+      - name: Check and Record YouTube Live
         run: |
+          CHANNEL="https://www.youtube.com/@bigezmogestream"
+          DATE=$(date +%Y-%m-%d_%H-%M-%S)
           mkdir -p recordings
-          yt-dlp --live-from-start -f best \
-            -o "recordings/%(title)s_%(id)s.%(ext)s" \
-            https://www.youtube.com/watch?v=RG1iWQtYSL0
 
-      - name: Upload recording as artifact
-        uses: actions/upload-artifact@v3
+          # بررسی لایو بودن کانال
+          STATUS=$(yt-dlp --skip-download --print "%(is_live)s" "$CHANNEL")
+          if [ "$STATUS" = "True" ]; then
+            echo "Channel is live! Start recording..."
+            yt-dlp --live-from-start -f best \
+              -o "recordings/live_${DATE}_%(title)s.%(ext)s" \
+              "$CHANNEL"
+          else
+            echo "Channel is not live, skipping..."
+          fi
+
+      - name: Upload recordings as GitHub Artifact
+        uses: actions/upload-artifact@v4
         with:
-          name: yt-live-recording
+          name: yt-live-recordings
           path: recordings/*
+
+      - name: Upload recordings to Google Drive
+        if: success()
+        run: |
+          for file in recordings/*; do
+            rclone copy "$file" gdrive:/YouTube_Live --progress
+          done
+        env:
+          RCLONE_CONFIG: ${{ secrets.RCLONE_CONFIG }}
